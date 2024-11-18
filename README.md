@@ -33,6 +33,31 @@ make
 
    In both commands, replace `<domain_name>` with the name of the virtual machine, `<socket_path>` with the path to the QMP socket, and `<system.map_path>` with the path to the `System.map` file for the guest kernel.
 
+## Example
+
+```bash
+$ ./kvm-dmesg /tmp/qmp.sock System.map-5.15.171
+
+[    0.000000] Linux version 5.15.171 (rayylee@ubuntu-dev) (gcc (Ubuntu 13.2.0-23ubuntu4) 13.2.0, GNU ld (GNU Binutils for Ubuntu) 2.42) #1 SMP Tue Nov 12 14:44:05 UTC 2024
+[    0.000000] Command line: console=ttyS0
+[    0.000000] BIOS-provided physical RAM map:
+[    0.000000] BIOS-e820: [mem 0x0000000000000000-0x000000000009fbff] usable
+[    0.000000] BIOS-e820: [mem 0x000000000009fc00-0x000000000009ffff] reserved
+[    0.000000] BIOS-e820: [mem 0x00000000000f0000-0x00000000000fffff] reserved
+[    0.000000] BIOS-e820: [mem 0x0000000000100000-0x000000001ffdffff] usable
+[    0.000000] BIOS-e820: [mem 0x000000001ffe0000-0x000000001fffffff] reserved
+[    0.000000] BIOS-e820: [mem 0x00000000feffc000-0x00000000feffffff] reserved
+[    0.000000] BIOS-e820: [mem 0x00000000fffc0000-0x00000000ffffffff] reserved
+[    0.000000] BIOS-e820: [mem 0x000000fd00000000-0x000000ffffffffff] reserved
+[    0.000000] NX (Execute Disable) protection: active
+[    0.000000] SMBIOS 2.8 present.
+[    0.000000] DMI: QEMU Standard PC (i440FX + PIIX, 1996), BIOS rel-1.16.3-0-ga6ed6b701f0a-prebuilt.qemu.org 04/01/2014
+[    0.000000] tsc: Fast TSC calibration using PIT
+[    0.000000] tsc: Detected 3194.022 MHz processor
+[    0.000569] e820: update [mem 0x00000000-0x00000fff] usable ==> reserved
+[    0.000571] e820: remove [mem 0x000a0000-0x000fffff] usable
+...
+```
 
 ## Requirements
 
