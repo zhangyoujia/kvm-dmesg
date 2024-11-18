@@ -71,7 +71,8 @@ static int qmp_establish_conn(char *sock_path)
 
     char buf[512];
 
-    if (!(path_len = strlen(sock_path))) {
+    path_len = strlen(sock_path);
+    if (path_len == 0) {
         return -1;
     }
 
@@ -82,7 +83,7 @@ static int qmp_establish_conn(char *sock_path)
     memset(&saddr, 0, sizeof(struct sockaddr_un));
     saddr.sun_family = AF_UNIX;
 
-    strncpy(saddr.sun_path, sock_path, path_len);
+    memcpy(saddr.sun_path, sock_path, path_len);
     saddr.sun_path[path_len] = '\0';
 
     qmp_fd = s;
@@ -326,11 +327,10 @@ err_exit:
 int qmp_readmem(uint64_t addr, void *buffer, size_t size)
 {
     int step = 4096;
-    int i;
     uint8_t *buf = (uint8_t *)buffer;
     size_t left = size % step;
 
-    for (i = 0; i < size / step; i++) {
+    for (size_t i = 0; i < size / step; i++) {
         if (qmp_readmem_part(addr, buf, step) != 0) {
             return -1;
         }

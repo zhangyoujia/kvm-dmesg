@@ -112,8 +112,10 @@ int libvirt_get_registers(uint64_t *idtr, uint64_t *cr3, uint64_t *cr4)
 
         line = strtok(NULL, "\n");  // Next line
     }
+    *cr4 = 0;
 
     free(hmp_response);
+    return 0;
 }
 
 static void* libvirt_dump_phy_memory(uint64_t start_addr, ssize_t size)
@@ -140,7 +142,7 @@ static void* libvirt_dump_phy_memory(uint64_t start_addr, ssize_t size)
     while (line != NULL) {
         int num = sscanf(line, "%*s 0x%x 0x%x 0x%x 0x%x",
                 &values[0], &values[1], &values[2], &values[3]);
-        for (int j = 0; j < num && j < sizeof(values) / sizeof(values[0]); j++) {
+        for (int j = 0; j < num && j < (int)(sizeof(values) / sizeof(values[0])); j++) {
             data[i++] = values[j];
         }
         line = strtok(NULL, "\n");  // Next line
@@ -165,11 +167,10 @@ int libvirt_readmem_part(uint64_t addr, uint8_t *buffer, size_t size)
 int libvirt_readmem(uint64_t addr, void *buffer, size_t size)
 {
     int step = 4096;
-    int i;
     uint8_t *buf = (uint8_t *)buffer;
     size_t left = size % step;
 
-    for (i = 0; i < size / step; i++) {
+    for (size_t i = 0; i < size / step; i++) {
         if (libvirt_readmem_part(addr, buf, step) != 0) {
             return -1;
         }
@@ -205,6 +206,7 @@ int file_client_uninit( )
         fclose(mem_file);
     }
     mem_file = NULL;
+    return 0;
 }
 
 int file_readmem(uint64_t addr, void *buffer, size_t size)
@@ -233,6 +235,7 @@ int file_get_registers(uint64_t *idtr, uint64_t *cr3, uint64_t *cr4)
 {
     *cr3 = 0x0000000019872000;
     *idtr = 0xffffffffff528000;
+    *cr4 = 0;
     return 0;
 }
 
@@ -240,11 +243,12 @@ int get_cr3_idtr(uint64_t *cr3, uint64_t *idtr)
 {
     uint64_t cr4;
     guest_client->get_registers(idtr, cr3, &cr4);
+    return 0;
 }
 
 int readmem(uint64_t addr, int memtype, void *buffer, long size)
 {
-    physaddr_t paddr;
+    physaddr_t paddr = 0;
 
     switch (memtype) {
         case KVADDR:

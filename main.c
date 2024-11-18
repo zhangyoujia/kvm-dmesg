@@ -100,6 +100,8 @@ int x86_64_kvtop(ulong kvaddr, physaddr_t *paddr)
     pmd_pte = x86_64_pmd_offset(pud_pte, kvaddr);
     pte = x86_64_pte_offset(pmd_pte, kvaddr);
     *paddr = (PAGEBASE(pte) & PHYSICAL_PAGE_MASK) + PAGEOFFSET(kvaddr);
+
+    return 0;
 }
 
 ulong get_vec0_addr(ulong idtr)
@@ -244,7 +246,6 @@ static uint32_t log_next(uint32_t idx, char *logbuf)
 
 static void dump_log_entry(char *logptr)
 {
-    int indent;
     char *msg, *p;
     uint16_t i, text_len;
     uint64_t ts_nsec;
@@ -278,7 +279,7 @@ static void dump_variable_length_record_log(void)
 {
     uint32_t idx, log_first_idx, log_next_idx, log_buf_len;
     ulong log_buf;
-    char *logptr, *logbuf, *log_struct_name;
+    char *logptr, *logbuf;
 
     get_symbol_data("log_first_idx", sizeof(uint32_t), &log_first_idx);
     get_symbol_data("log_next_idx", sizeof(uint32_t), &log_next_idx);
@@ -422,7 +423,7 @@ int main(int argc, char *argv[])
     readmem(log_buf, KVADDR, logbuf_arry, log_buf_len);
 
     int next_line = FALSE;
-    for (int i = 0; i < log_buf_len; i++) {
+    for (ulong i = 0; i < log_buf_len; i++) {
         if (logbuf_arry[i]) {
             if (ascii(logbuf_arry[i])) {
                 next_line = TRUE;

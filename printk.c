@@ -48,12 +48,10 @@ static void dump_record(struct prb_map *m, unsigned long id)
 {
     unsigned short text_len;
     unsigned long state_var;
-    unsigned int caller_id;
     char *desc, *info, *text, *p;
     enum desc_state state;
     unsigned long begin;
     unsigned long next;
-    unsigned long long seq;
     uint64_t ts_nsec;
     unsigned long long nanos;
     unsigned long rem;
@@ -70,8 +68,6 @@ static void dump_record(struct prb_map *m, unsigned long id)
         return;
 
     info = m->infos + ((id % m->desc_ring_count) * sizeof(struct printk_info));
-    seq = ULONGLONG(info + offsetof(struct printk_info, seq));
-    caller_id = UINT(info + offsetof(struct printk_info, caller_id));
 
     text_len = USHORT(info + offsetof(struct printk_info, text_len));
 
