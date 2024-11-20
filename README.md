@@ -13,7 +13,7 @@
 
 ## Compilation
 
-To compile the tool, simply run:
+To compile the tool, you need to ensure that `libvirt-dev` are installed and then simply run:
 
 ```bash
 make
