@@ -223,36 +223,36 @@ void dump_lockless_record_log()
     }
 
     get_symbol_data("prb", sizeof(char *), &kaddr);
-    m.prb = xmalloc(sizeof(struct printk_ringbuffer));
+    m.prb = xmalloc(SIZE(printk_ringbuffer));
 
-    if (readmem(kaddr, KVADDR, m.prb, sizeof(struct printk_ringbuffer))) {
+    if (readmem(kaddr, KVADDR, m.prb, SIZE(printk_ringbuffer))) {
         pr_err("Cannot read printk_ringbuffer contents");
         goto out_prb;
     }
 
-    m.desc_ring = m.prb + offsetof(struct printk_ringbuffer, desc_ring);
-    m.desc_ring_count = 1 << UINT(m.desc_ring + offsetof(struct prb_desc_ring ,count_bits));
+    m.desc_ring = m.prb + OFFSET(prb_desc_ring);
+    m.desc_ring_count = 1 << UINT(m.desc_ring + OFFSET(prb_desc_ring_count_bits));
 
-    kaddr = ULONG(m.desc_ring + offsetof(struct prb_desc_ring, descs));
-    m.descs = xmalloc(sizeof(struct prb_desc) * m.desc_ring_count);
+    kaddr = ULONG(m.desc_ring + OFFSET(prb_desc_ring_descs));
+    m.descs = xmalloc(SIZE(prb_desc) * m.desc_ring_count);
 
-    if (readmem(kaddr, KVADDR, m.descs, sizeof(struct prb_desc) * m.desc_ring_count)) {
+    if (readmem(kaddr, KVADDR, m.descs, SIZE(prb_desc) * m.desc_ring_count)) {
         pr_err("Cannot read prb_desc_ring contents");
         goto out_descs;
     }
 
-    kaddr = ULONG(m.desc_ring + offsetof(struct prb_desc_ring, infos));
-    m.infos = xmalloc(sizeof(struct printk_info) * m.desc_ring_count);
+    kaddr = ULONG(m.desc_ring + OFFSET(prb_desc_ring_infos));
+    m.infos = xmalloc(SIZE(printk_info) * m.desc_ring_count);
 
-    if (readmem(kaddr, KVADDR, m.infos, sizeof(struct printk_info) * m.desc_ring_count)) {
+    if (readmem(kaddr, KVADDR, m.infos, SIZE(printk_info) * m.desc_ring_count)) {
         pr_err("Cannot read prb_info_ring contents");
         goto out_infos;
     }
 
-    m.text_data_ring = m.prb + offsetof(struct printk_ringbuffer, text_data_ring);
-    m.text_data_ring_size = 1 << UINT(m.text_data_ring + offsetof(struct prb_data_ring, size_bits));
+    m.text_data_ring = m.prb + OFFSET(prb_text_data_ring);
+    m.text_data_ring_size = 1 << UINT(m.text_data_ring + OFFSET(prb_data_ring_size_bits));
 
-    kaddr = ULONG(m.text_data_ring + offsetof(struct prb_data_ring, data));
+    kaddr = ULONG(m.text_data_ring + OFFSET(prb_data_ring_data));
     m.text_data = xmalloc(m.text_data_ring_size);
 
     if (readmem(kaddr, KVADDR, m.text_data, m.text_data_ring_size)) {
@@ -260,9 +260,9 @@ void dump_lockless_record_log()
         goto out_text_data;
     }
 
-    tail_id = ULONG(m.desc_ring + offsetof(struct prb_desc_ring, tail_id) +
+    tail_id = ULONG(m.desc_ring + OFFSET(prb_desc_ring_tail_id) +
             offsetof(atomic_long_t, counter));
-    head_id = ULONG(m.desc_ring + offsetof(struct prb_desc_ring, head_id) +
+    head_id = ULONG(m.desc_ring + OFFSET(prb_desc_ring_head_id) +
             offsetof(atomic_long_t, counter));
 
     for (id = tail_id; id != head_id; id = (id + 1) & DESC_ID_MASK) {
