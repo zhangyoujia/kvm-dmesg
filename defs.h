@@ -107,6 +107,45 @@ extern struct machdep_table *machdep;
             machdep->last_ptbl_read = (ulong)(PTBL);                          \
     }
 
+struct offset_table {
+    // struct printk_ringbuffer
+    long prb_desc_ring;
+    long prb_text_data_ring;
+
+    // struct prb_desc_ring
+    long prb_desc_ring_count_bits;
+    long prb_desc_ring_descs;
+    long prb_desc_ring_infos;
+    long prb_desc_ring_head_id;
+    long prb_desc_ring_tail_id;
+
+    // struct prb_data_ring
+    long prb_data_ring_size_bits;
+    long prb_data_ring_data;
+};
+
+struct size_table {
+    long printk_info;
+    long prb_desc;
+
+    long printk_ringbuffer;
+    long prb_desc_ring;
+    long prb_data_ring;
+};
+
+#define MEMBER_OFFSET_REQUEST (0)
+#define STRUCT_SIZE_REQUEST   (-4)
+
+#define STRUCT_SIZE(X)      datatype_info((X), NULL, STRUCT_SIZE_REQUEST)
+#define MEMBER_OFFSET(X,Y)  datatype_info((X), (Y), MEMBER_OFFSET_REQUEST)
+
+#define OFFSET(X)          (offset_table.X)
+#define SIZE(X)            (size_table.X)
+#define ASSIGN_SIZE(X)     (size_table.X)
+#define ASSIGN_OFFSET(X)   (offset_table.X)
+
+#define STRUCT_SIZE_INIT(X, Y) (ASSIGN_SIZE(X) = STRUCT_SIZE(Y))
+#define MEMBER_OFFSET_INIT(X, Y, Z) (ASSIGN_OFFSET(X) = MEMBER_OFFSET(Y, Z))
 
 #define ULONG(ADDR)     *((ulong *)((char *)(ADDR)))
 #define UINT(ADDR)      *((uint *)((char *)(ADDR)))
@@ -196,7 +235,8 @@ struct machine_specific {
 extern FILE *fp;
 extern struct program_context program_context, *pc;
 extern struct kernel_table kernel_table, *kt;
-
+extern struct offset_table offset_table;
+extern struct size_table size_table;
 extern struct vm_table vm_table, *vt;
 extern struct symbol_table_data symbol_table_data, *st;
 

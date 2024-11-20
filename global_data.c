@@ -31,3 +31,6 @@ struct symbol_table_data *st = &symbol_table_data;
 
 struct machdep_table machdep_table = { 0 };
 struct machdep_table *machdep = &machdep_table;
+
+struct offset_table offset_table = { 0 };
+struct size_table size_table = { 0 };

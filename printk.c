@@ -13,6 +13,7 @@
  * GNU General Public License for more details.
  */
 
+#include <stdlib.h>
 #include <ctype.h>
 
 #include "xutil.h"
@@ -34,6 +35,107 @@ enum desc_state {
     desc_finalized	= 0x2,	/* committed, no further modification allowed */
     desc_reusable	= 0x3,	/* free, not yet used by any writer */
 };
+
+static char *vmcoreinfo_buf = NULL;
+
+static char *vmcoreinfo_read_string(const char *key)
+{
+    const char *buf = vmcoreinfo_buf;
+    char *value_string = NULL;
+    char *p1, *p2;
+    size_t value_length;
+    char keybuf[64] = {0};
+
+    sprintf(keybuf, "%s=", key);
+
+    if ((p1 = strstr(buf, keybuf))) {
+        p2 = p1 + strlen(keybuf);
+        p1 = strstr(p2, "\n");
+        value_length = p1 - p2;
+        value_string = xcalloc(value_length + 1, sizeof(char));
+        strncpy(value_string, p2, value_length);
+        value_string[value_length] = '\0';
+    }
+
+    return value_string;
+}
+
+long datatype_info(char *name, char *member, int datatype)
+{
+    char buf[64] = {0};
+    char *value_string;
+    char *endptr;
+    long value  = 0;
+
+    if (datatype == STRUCT_SIZE_REQUEST){
+        sprintf(buf, "SIZE(%s)", name);
+    } else if (datatype == MEMBER_OFFSET_REQUEST) {
+        sprintf(buf, "OFFSET(%s.%s)", name, member);
+    }
+
+    if (strlen(buf)) {
+        value_string = vmcoreinfo_read_string(buf);
+        if (value_string) {
+            value = strtol(value_string, &endptr, 10);
+            xfree(value_string);
+        }
+   }
+
+    return value;
+}
+
+static void vmcoreinfo_init()
+{
+    char *buf, *n;
+    size_t vmcoreinfo_size;
+    ulong vmcoreinfo_data;
+
+    get_symbol_data("vmcoreinfo_size", sizeof(vmcoreinfo_size), &vmcoreinfo_size);
+    vmcoreinfo_size &= ((1<<13) - 1);
+
+    vmcoreinfo_buf = xmalloc(vmcoreinfo_size + 1);
+    buf = vmcoreinfo_buf;
+    get_symbol_data("vmcoreinfo_data", sizeof(vmcoreinfo_data), &vmcoreinfo_data);
+    if (readmem(vmcoreinfo_data, KVADDR, buf, vmcoreinfo_size)) {
+        pr_err("cannot read vmcoreinfo_data");
+        goto err;
+    }
+    buf[vmcoreinfo_size] = '\n';
+
+    if (CRASHDEBUG(2)) {
+        for (size_t i = 0; i < vmcoreinfo_size; i++) {
+            fprintf(fp, "%c", buf[i]);
+        }
+        fprintf(fp, "\n");
+    }
+
+    n = "printk_info";
+    STRUCT_SIZE_INIT(printk_info, n);
+
+    n = "prb_desc";
+    STRUCT_SIZE_INIT(prb_desc, n);
+
+    n = "printk_ringbuffer";
+    STRUCT_SIZE_INIT(printk_ringbuffer, n);
+    MEMBER_OFFSET_INIT(prb_desc_ring, n, "desc_ring");
+    MEMBER_OFFSET_INIT(prb_text_data_ring, n, "text_data_ring");
+
+    n = "prb_desc_ring";
+    STRUCT_SIZE_INIT(prb_desc_ring, n);
+    MEMBER_OFFSET_INIT(prb_desc_ring_count_bits, n, "count_bits");
+    MEMBER_OFFSET_INIT(prb_desc_ring_descs, n, "descs");
+    MEMBER_OFFSET_INIT(prb_desc_ring_infos, n, "infos");
+    MEMBER_OFFSET_INIT(prb_desc_ring_head_id, n, "head_id");
+    MEMBER_OFFSET_INIT(prb_desc_ring_tail_id, n, "tail_id");
+
+    n = "prb_data_ring";
+    STRUCT_SIZE_INIT(prb_data_ring, n);
+    MEMBER_OFFSET_INIT(prb_data_ring_size_bits, n, "size_bits");
+    MEMBER_OFFSET_INIT(prb_data_ring_data, n, "data");
+
+err:
+    xfree(vmcoreinfo_buf);
+}
 
 static enum desc_state get_desc_state(unsigned long id,
         unsigned long state_val)
@@ -115,6 +217,10 @@ void dump_lockless_record_log()
     unsigned long kaddr;
     unsigned long id;
     struct prb_map m;
+
+    if (SIZE(printk_info) == 0) {
+        vmcoreinfo_init();
+    }
 
     get_symbol_data("prb", sizeof(char *), &kaddr);
     m.prb = xmalloc(sizeof(struct printk_ringbuffer));

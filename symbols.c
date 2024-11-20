@@ -31,6 +31,10 @@ int symbol_needed(const char *symbol)
         "divide_error",
         "asm_exc_divide_error",
         "idt_table",
+        "vmcoreinfo_data",
+        "vmcoreinfo_size",
+        "page_offset_base",
+        "vmalloc_base",
         "prb"
     };
     size_t array_size = sizeof(symtab_array) / sizeof(symtab_array[0]);

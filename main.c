@@ -194,6 +194,14 @@ void x86_64_init()
     machdep->machspec->page_offset = PAGE_OFFSET_2_6_27;
 }
 
+void x86_64_post_reloc()
+{
+    if (kernel_symbol_exists("page_offset_base")) {
+        get_symbol_data("page_offset_base", sizeof(ulong),
+            &machdep->machspec->page_offset);
+    }
+}
+
 void derive_kaslr_offset()
 {
     ulong kaslr_offset = 0;
@@ -395,6 +403,8 @@ int main(int argc, char *argv[])
     x86_64_init();
 
     derive_kaslr_offset();
+
+    x86_64_post_reloc();
 
     if (kernel_symbol_exists("prb")) {
         dump_lockless_record_log();
