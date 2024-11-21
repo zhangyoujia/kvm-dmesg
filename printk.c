@@ -44,9 +44,9 @@ static char *vmcoreinfo_read_string(const char *key)
     char *value_string = NULL;
     char *p1, *p2;
     size_t value_length;
-    char keybuf[64] = {0};
+    char keybuf[80] = {0};
 
-    sprintf(keybuf, "%s=", key);
+    snprintf(keybuf, sizeof(keybuf), "%s=", key);
 
     if ((p1 = strstr(buf, keybuf))) {
         p2 = p1 + strlen(keybuf);
@@ -68,9 +68,9 @@ long datatype_info(char *name, char *member, int datatype)
     long value  = 0;
 
     if (datatype == STRUCT_SIZE_REQUEST){
-        sprintf(buf, "SIZE(%s)", name);
+        snprintf(buf, sizeof(buf), "SIZE(%s)", name);
     } else if (datatype == MEMBER_OFFSET_REQUEST) {
-        sprintf(buf, "OFFSET(%s.%s)", name, member);
+        snprintf(buf, sizeof(buf), "OFFSET(%s.%s)", name, member);
     }
 
     if (strlen(buf)) {
@@ -184,7 +184,7 @@ static void dump_record(struct prb_map *m, unsigned long id)
     ts_nsec = ULONGLONG(info + offsetof(struct printk_info, ts_nsec));
     nanos = (unsigned long long)ts_nsec / (unsigned long long)1000000000;
     rem = (unsigned long long)ts_nsec % (unsigned long long)1000000000;
-    sprintf(buf, "[%5lld.%06ld] ", nanos, rem/1000);
+    snprintf(buf, sizeof(buf), "[%5lld.%06ld] ", nanos, rem/1000);
     fprintf(fp, "%s", buf);
 
     if (begin > next)
