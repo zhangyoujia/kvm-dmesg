@@ -1,8 +1,8 @@
 TARGET = kvm-dmesg
 Q = @
 CC = gcc
-CFLAGS = -std=gnu99 -Wall -Wextra -O2 $(shell pkg-config --cflags libvirt libvirt-qemu)
-LDFLAGS = $(shell pkg-config --libs libvirt libvirt-qemu)
+CFLAGS = -std=gnu99 -Wall -Wextra -O2
+LDFLAGS = -ldl
 
 SRC = main.c \
 	  log.c \

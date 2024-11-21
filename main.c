@@ -396,7 +396,8 @@ int main(int argc, char *argv[])
     fprintf(fp, "Guest: %s\n", guest_ac);
     fprintf(fp, "System.map: %s\n", symmap_file);
 
-    guest_client_new(guest_ac, ac_type);
+    if (guest_client_new(guest_ac, ac_type))
+        return -1;
 
     symtab_init(symmap_file);
 

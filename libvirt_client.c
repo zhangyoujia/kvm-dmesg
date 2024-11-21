@@ -15,6 +15,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <getopt.h>
@@ -26,22 +27,82 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
-#include <libvirt/libvirt.h>
-#include <libvirt/libvirt-qemu.h>
-#include <libvirt/virterror.h>
 
 #include "xutil.h"
 #include "defs.h"
 #include "log.h"
 
-guest_client_t *guest_client = NULL;
+typedef enum {
+    VIR_DOMAIN_QEMU_MONITOR_COMMAND_DEFAULT = 0,
+    VIR_DOMAIN_QEMU_MONITOR_COMMAND_HMP     = (1 << 0), /* cmd is in HMP */
+} virDomainQemuMonitorCommandFlags;
 
+typedef void* virDomainPtr;
+typedef void* virConnectPtr;
+
+virConnectPtr (*virConnectOpen)(const char *name);
+int (*virConnectClose)(virConnectPtr conn);
+virDomainPtr (*virDomainLookupByName)(virConnectPtr conn, const char *name);
+int (*virDomainFree)(virDomainPtr domain);
+int (*virDomainQemuMonitorCommand)(virDomainPtr domain, const char *cmd, char **result, unsigned int flags);
+
+void *libvirt_handle = NULL;
+void *libvirt_qemu_handle = NULL;
 virDomainPtr domain = NULL;
 virConnectPtr domain_conn = NULL;
+
+guest_client_t *guest_client = NULL;
 FILE *mem_file = NULL;
+
+#define CHECK_FUNC(f) if (!f) { pr_err("Error loading function: %s\n", dlerror()); return -1; }
+
+static int libvirt_dlopen()
+{
+    libvirt_handle = dlopen("libvirt.so.0", RTLD_NOW);
+    if (!libvirt_handle) {
+        pr_err("Error loading libvirt.so.0, %s\n", dlerror());
+        return -1;
+    }
+
+    libvirt_qemu_handle = dlopen("libvirt-qemu.so.0", RTLD_NOW);
+    if (!libvirt_qemu_handle) {
+        pr_err("Error loading libvirt-qemu.so.0, %s\n", dlerror());
+        dlclose(libvirt_handle);
+        libvirt_handle = NULL;
+        return -1;
+    }
+
+    return 0;
+}
+
+static int libvirt_dlsym()
+{
+    virConnectOpen = dlsym(libvirt_handle, "virConnectOpen");
+    virConnectClose = dlsym(libvirt_handle, "virConnectClose");
+    virDomainLookupByName = dlsym(libvirt_handle, "virDomainLookupByName");
+    virDomainFree = dlsym(libvirt_handle, "virDomainFree");
+    virDomainQemuMonitorCommand = dlsym(libvirt_qemu_handle, "virDomainQemuMonitorCommand");
+
+    CHECK_FUNC(virConnectOpen);
+    CHECK_FUNC(virConnectClose);
+    CHECK_FUNC(virDomainLookupByName);
+    CHECK_FUNC(virDomainFree);
+    CHECK_FUNC(virDomainQemuMonitorCommand);
+
+    return 0;
+}
 
 int libvirt_client_init(char *guest_name)
 {
+    if (libvirt_dlopen()) {
+        return -1;
+    }
+
+    if (libvirt_dlsym()) {
+        return -1;
+    }
+
+
     if (!domain_conn)
         domain_conn = virConnectOpen("qemu:///system");
 
@@ -54,8 +115,9 @@ int libvirt_client_init(char *guest_name)
         domain = virDomainLookupByName(domain_conn, guest_name);
 
     if (!domain) {
-        pr_err("Failed to find the domain");
+        pr_err("Failed to find the domain: %s", guest_name);
         virConnectClose(domain_conn);
+        domain_conn = NULL;
         return -1;
     }
 
@@ -72,6 +134,16 @@ int libvirt_client_uninit()
     if (domain_conn) {
         virConnectClose(domain_conn);
         domain_conn = NULL;
+    }
+
+    if (libvirt_handle) {
+        dlclose(libvirt_handle);
+        libvirt_handle = NULL;
+    }
+
+    if (libvirt_qemu_handle) {
+        dlclose(libvirt_qemu_handle);
+        libvirt_qemu_handle = NULL;
     }
 
     return 0;
@@ -275,17 +347,20 @@ int guest_client_new(char *ac, guest_access_t ty)
     c->ty = ty;
     switch(c->ty) {
         case GUEST_NAME:
-            libvirt_client_init(ac);
+            if (libvirt_client_init(ac))
+                return -1;
             c->get_registers = libvirt_get_registers;
             c->readmem = libvirt_readmem;
             break;
         case GUEST_MEMORY:
-            file_client_init(ac);
+            if (file_client_init(ac))
+                return -1;
             c->get_registers = file_get_registers;
             c->readmem = file_readmem;
             break;
         case QMP_SOCKET:
-            qmp_client_init(ac);
+            if (qmp_client_init(ac))
+                return -1;
             c->get_registers = qmp_get_registers;
             c->readmem = qmp_readmem;
             break;
