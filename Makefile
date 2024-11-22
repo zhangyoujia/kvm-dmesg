@@ -6,6 +6,7 @@ LDFLAGS = -ldl
 
 SRC = main.c \
 	  log.c \
+    kernel.c \
 	  version.c \
 	  global_data.c \
 	  symbols.c \
