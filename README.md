@@ -16,7 +16,7 @@
 To compile the tool, simply run:
 
 ```bash
-make
+meson setup build && meson compile -C build 
 ```
 
 ## Usage
