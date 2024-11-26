@@ -44,7 +44,7 @@ typedef uint64_t physaddr_t;
 
 typedef unsigned long long int ulonglong;
 
-#define CRASHDEBUG(x) (pc->debug >= (x))
+#define KDEBUG(x) (pc->debug >= (x))
 
 struct program_context {
     ulong debug;                    /* level of debug */

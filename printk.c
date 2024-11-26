@@ -125,7 +125,7 @@ void vmcoreinfo_init()
 
     buf[vmcoreinfo_size] = '\n';
 
-    if (CRASHDEBUG(2)) {
+    if (KDEBUG(2)) {
         for (size_t i = 0; i < vmcoreinfo_size; i++) {
             fprintf(fp, "%c", buf[i]);
         }

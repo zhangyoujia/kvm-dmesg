@@ -163,14 +163,11 @@ int calc_kaslr_offset(ulong *kaslr_offset, ulong *phys_base)
     *phys_base = idtr_paddr -
         (st->idt_table_vmlinux + *kaslr_offset - __START_KERNEL_map);
 
-    if (CRASHDEBUG(1)) {
+    if (KDEBUG(1)) {
         pr_debug("kaslr_offset: idtr=%lx", idtr);
         pr_debug("kaslr_offset: pgd=%lx", pgd);
         pr_debug("kaslr_offset: idtr(phys)=%lx", idtr_paddr);
         pr_debug("kaslr_offset: divide_error(vmcore): %lx", divide_error_vmcore);
-    }
-
-    if (CRASHDEBUG(1)) {
         pr_debug("kaslr_offset: kaslr_offset=%lx", *kaslr_offset);
         pr_debug("kaslr_offset: phys_base   =%lx", *phys_base);
     }
@@ -294,7 +291,7 @@ static void dump_variable_length_record_log(void)
     get_symbol_data("log_buf_len", sizeof(uint32_t), &log_buf_len);
     get_symbol_data("log_buf", sizeof(char *), &log_buf);
 
-    if (CRASHDEBUG(1)) {
+    if (KDEBUG(1)) {
         pr_debug("log_buf: %lx", (ulong)log_buf);
         pr_debug("log_buf_len: %d", log_buf_len);
         pr_debug("log_first_idx: %d", log_first_idx);
@@ -325,12 +322,12 @@ static int is_text_file(const char *path)
     size_t bytes_read = 0;
     FILE *file = fopen(path, "rb");
 
-    if (file == NULL) {
+    if (!file) {
         pr_err("Failed to open file: %s", path);
         return -1;
     }
 
-    while (bytes_read < 1024  && fread(&byte, 1, 1, file) == 1) {
+    while (bytes_read < 1024 && fread(&byte, 1, 1, file) == 1) {
         if (!isprint(byte) && !isspace(byte) && byte != '\0') {
             fclose(file);
             return 0;
@@ -342,44 +339,101 @@ static int is_text_file(const char *path)
     return 1;
 }
 
+static void usage(void)
+{
+    fprintf(fp, "kvm-dmesg version %s \n", get_version_text());
+    fprintf(fp, "Print the kernel messages from a virtual machine running under KVM\n");
+    fprintf(fp, "\n");
+    fprintf(fp, "Usage: kvm-dmesg <domain_name/socket_path> <system.map> [options]\n");
+    fprintf(fp, "\n");
+    fprintf(fp, "  -h, --help       display this help and exit\n");
+    fprintf(fp, "  -v, --version    output version information and exit\n");
+    fprintf(fp, "  -d, --debug      specify debug level\n");
+    fprintf(fp, "\n");
+}
+
+static void version(void)
+{
+    fprintf(fp, "Version %s\n", get_version_text());
+}
+
+static int parse_options(int argc, char **argv)
+{
+    int ch;
+    int idx = 0;
+    const char *short_opts = "hvd:";
+    static const struct option long_opts[] = {
+        {"help",      no_argument,       NULL, 'h'},
+        {"version",   no_argument,       NULL, 'v'},
+        {"debug",     required_argument, NULL, 'd'},
+        {NULL,        0,                 NULL, 0  }
+    };
+
+    while ((ch = getopt_long(argc, argv, short_opts, long_opts, &idx)) != -1) {
+        switch (ch) {
+            case 'h':
+                usage();
+                exit(0);
+            case 'v':
+                version();
+                exit(0);
+            case 'd':
+                pc->debug = atol(optarg);
+                if (pc->debug > 0) {
+                    log_init(LOGLEVEL_DEBUG);
+                }
+                break;
+            case '?':
+                fprintf(fp, "Try `%s --help' for more information.\n", argv[0]);
+                exit(0);
+                break;
+        }
+    }
+
+    return optind;
+}
+
 int main(int argc, char *argv[])
 {
+    char *arg1 = NULL;
+    char *arg2 = NULL;
     struct stat path_stat;
     char *symmap_file = NULL;
     char *guest_ac = NULL;
     guest_access_t ac_type;
+    int ind;
 
-    pc->debug = 1;
+    pc->debug = 0;
     fp = stdout;
 
-    fprintf(fp, "Version %s\n\n", get_version_text());
-
-    if (argc != 3 ) {
-        fprintf(fp, "Usage: %s <domain_name/socket_path> <system.map>\n", argv[0]);
-        return -1;
+    ind = parse_options(argc, argv);
+    if (ind < argc) {
+        arg1 = argv[ind];
+        ind++;
+    }
+    if (ind < argc) {
+        arg2 = argv[ind];
+        ind++;
     }
 
-    if (!stat(argv[1], &path_stat) && S_ISREG(path_stat.st_mode)) {
-        if ( is_text_file(argv[1]) == 1) {
-            symmap_file = argv[1];
-            guest_ac = argv[2];
+    if (!stat(arg1, &path_stat) && S_ISREG(path_stat.st_mode)) {
+        if (is_text_file(arg1) == 1) {
+            symmap_file = arg1;
+            guest_ac = arg2;
         }
     }
-
     if (!symmap_file) {
-        if (!stat(argv[2], &path_stat) && S_ISREG(path_stat.st_mode)) {
-            if ( is_text_file(argv[2]) == 1) {
-                symmap_file = argv[2];
-                guest_ac = argv[1];
+        if (!stat(arg2, &path_stat) && S_ISREG(path_stat.st_mode)) {
+            if (is_text_file(arg2) == 1) {
+                symmap_file = arg2;
+                guest_ac = arg1;
             }
         }
     }
-
     if (!symmap_file) {
-        pr_err("System.map file not foound");
+        pr_err("System.map file not found");
         return -1;
     }
-
     if (stat(guest_ac, &path_stat) == 0) {
         if (S_ISREG(path_stat.st_mode)) {
             ac_type = GUEST_MEMORY;
@@ -393,18 +447,14 @@ int main(int argc, char *argv[])
         ac_type = GUEST_NAME;
     }
 
-    fprintf(fp, "Guest: %s\n", guest_ac);
+    fprintf(fp, "Guest     : %s\n", guest_ac);
     fprintf(fp, "System.map: %s\n", symmap_file);
 
     if (guest_client_new(guest_ac, ac_type))
         return -1;
-
     symtab_init(symmap_file);
-
     x86_64_init();
-
     derive_kaslr_offset();
-
     x86_64_post_reloc();
 
     vmcoreinfo_init();
@@ -413,9 +463,7 @@ int main(int argc, char *argv[])
     if (kernel_symbol_exists("prb")) {
         dump_lockless_record_log();
         goto exit;
-    }
-
-    if (kernel_symbol_exists("log_first_idx") &&
+    } else if (kernel_symbol_exists("log_first_idx") &&
             kernel_symbol_exists("log_next_idx")) {
         dump_variable_length_record_log();
         goto exit;
@@ -423,14 +471,13 @@ int main(int argc, char *argv[])
 
     ulong log_buf_len = 0;
     ulong log_buf = 0;
-
     get_symbol_data("log_buf", sizeof(char *), &log_buf);
     get_symbol_data("log_buf_len", sizeof(uint32_t), &log_buf_len);
 
     log_buf_len &= ((1<<20) | ((1<<20) - 1));
     char *logbuf_arry = malloc(log_buf_len);
 
-    if (CRASHDEBUG(1)) {
+    if (KDEBUG(1)) {
         pr_debug("log_buf len: %ld (0x%lx)", log_buf_len, log_buf_len);
         pr_debug("log_buf addr: 0x%lx", log_buf);
     }
