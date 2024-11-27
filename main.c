@@ -447,8 +447,10 @@ int main(int argc, char *argv[])
         ac_type = GUEST_NAME;
     }
 
-    fprintf(fp, "Guest     : %s\n", guest_ac);
-    fprintf(fp, "System.map: %s\n", symmap_file);
+    if (KDEBUG(1)) {
+        pr_debug("Guest     : %s", guest_ac);
+        pr_debug("System.map: %s", symmap_file);
+    }
 
     if (guest_client_new(guest_ac, ac_type))
         return -1;
