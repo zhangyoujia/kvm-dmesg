@@ -3,6 +3,9 @@ project('kvm-dmesg', 'c', default_options : ['c_std=gnu99'])
 # Compiler options
 cflags = ['-Wall', '-Wextra', '-O2']
 
+# Linker options
+ldflags = ['-ldl']
+
 # Sources
 sources = [
   'main.c',
@@ -20,5 +23,6 @@ sources = [
 # Build executable
 executable('kvm-dmesg',
   sources,
-  c_args       : cflags
+  c_args       : cflags,
+  link_args    : ldflags
 )
