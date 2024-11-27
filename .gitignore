@@ -1,3 +1,5 @@
 kvm-dmesg
 *.o
 tags
+build
+tests/kvm-dmesg-ci

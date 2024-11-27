@@ -27,6 +27,9 @@ $(TARGET): $(OBJ)
 	$(Q) echo "  CC      " $@
 	$(Q) $(CC) -c $< -o $@ $(CFLAGS)
 
+test: $(TARGET)
+	$Q bash tests/base.sh
+
 clean:
 	$(Q) $(RM) $(OBJ) $(TARGET) tags
 
