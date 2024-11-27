@@ -31,6 +31,7 @@
 #include "xutil.h"
 #include "defs.h"
 #include "log.h"
+#include "client.h"
 
 typedef enum {
     VIR_DOMAIN_QEMU_MONITOR_COMMAND_DEFAULT = 0,
