@@ -1,8 +1,12 @@
-TARGET = kvm-dmesg
-Q = @
-CC = gcc
-CFLAGS = -std=gnu99 -Wall -Wextra -O2
-LDFLAGS = -ldl
+TARGET := kvm-dmesg
+Q := @
+CC := $(CROSS_COMPILE)gcc
+CFLAGS := -std=gnu99 -Wall -Wextra -O2
+LDFLAGS := -ldl
+
+ifeq ($(STATIC), y)
+	LDFLAGS += -static
+endif
 
 SRC = main.c \
 	  log.c \
