@@ -16,19 +16,23 @@
 To compile the tool, simply run:
 
 ```bash
-meson setup build && meson compile -C build 
+$ make
+
+or
+
+$ meson setup build && meson compile -C build
 ```
 
 ## Usage
 
 1. **Using libvirt**:
    ```bash
-   ./kvm-dmesg <domain_name> <system.map_path>
+   $ ./kvm-dmesg <domain_name> <system.map_path>
    ```
 
 2. **Using QMP Socket**:
    ```bash
-   ./kvm-dmesg <socket_path> <system.map_path>
+   $ ./kvm-dmesg <socket_path> <system.map_path>
    ```
 
    In both commands, replace `<domain_name>` with the name of the virtual machine, `<socket_path>` with the path to the QMP socket, and `<system.map_path>` with the path to the `System.map` file for the guest kernel.
