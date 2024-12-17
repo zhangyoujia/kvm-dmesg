@@ -3,3 +3,4 @@ kvm-dmesg
 tags
 build
 tests/kvm-dmesg-ci
+scripts/*.tar.gz
