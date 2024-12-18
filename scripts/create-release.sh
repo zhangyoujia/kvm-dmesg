@@ -15,6 +15,20 @@ if [ -n "$EXTRA_VERSION" ]; then
     VERSION_STRING="${VERSION_STRING}.${EXTRA_VERSION}"
 fi
 
+with_static=false
+for arg in "$@"; do
+    case $arg in
+        --with-static)
+            with_static=true
+            ;;
+        --without-static)
+            with_static=false
+            ;;
+        *)
+            ;;
+    esac
+done
+
 release() {
     local pkg="$1"
     local bin="$2"
@@ -36,9 +50,11 @@ pushd ../
 popd
 release kvm-dmesg-${VERSION_STRING}-${ARCH} ../kvm-dmesg
 
-pushd ../
-    make clean && CROSS_COMPILE=x86_64-linux-musl- STATIC=y make
-popd
-release kvm-dmesg-${VERSION_STRING}-${ARCH}-static ../kvm-dmesg
+if $with_static; then
+    pushd ../
+        make clean && CROSS_COMPILE=x86_64-linux-musl- STATIC=y make
+    popd
+    release kvm-dmesg-${VERSION_STRING}-${ARCH}-static ../kvm-dmesg
+fi
 
 exit 0
