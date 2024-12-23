@@ -14,9 +14,10 @@ sources = [
   'kernel.c',
   'global_data.c',
   'symbols.c',
-  'libvirt_client.c',
   'printk.c',
   'xutil.c',
+  'client.c',
+  'libvirt_client.c',
   'qmp_client.c',
 ]
 

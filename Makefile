@@ -10,13 +10,14 @@ endif
 
 SRC = main.c \
 	  log.c \
-    kernel.c \
+	  kernel.c \
 	  version.c \
 	  global_data.c \
 	  symbols.c \
-	  libvirt_client.c \
 	  printk.c \
 	  xutil.c \
+	  client.c \
+	  libvirt_client.c \
 	  qmp_client.c
 
 OBJ = $(SRC:.c=.o)
