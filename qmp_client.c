@@ -23,11 +23,17 @@
 #include <sys/un.h>
 #include <poll.h>
 #include <stdint.h>
+#include <dirent.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "xutil.h"
 #include "log.h"
 
 static int qmp_fd;
+
+#define MAX_PATH_LEN 512
 
 #define QMP_GREETING            "{\"QMP\":"
 #define QMP_ENTER_COMMAND_MODE  "{ \"execute\": \"qmp_capabilities\" }"
@@ -35,6 +41,144 @@ static int qmp_fd;
 
 #define QMP_COMMAND_INFO_REGS   "{\"execute\": \"human-monitor-command\", \"arguments\": {\"command-line\": \"info registers\"}}"
 #define QMP_COMMAND_XP          "{\"execute\": \"human-monitor-command\", \"arguments\": {\"command-line\": \"xp /%" PRIu64 "xb 0x%zx\"}}"
+
+static char* get_absolute_path(const char *file_path)
+{
+    char *abs_path = (char *)xmalloc(MAX_PATH_LEN);
+    if (!abs_path) {
+        return NULL;
+    }
+
+    if (realpath(file_path, abs_path) == NULL) {
+        xfree(abs_path);
+        return NULL;
+    }
+
+    return abs_path;
+}
+
+static ino_t get_inode_from_socket(const char *socket_path)
+{
+    char line[MAX_PATH_LEN];
+    char inode[16];
+    char *path = (char *)xmalloc(MAX_PATH_LEN);
+    ino_t ino = -1;
+
+    if (!path) {
+        return -1;
+    }
+
+    char *abs_path = get_absolute_path(socket_path);
+    if (!abs_path) {
+        xfree(path);
+        return -1;
+    }
+
+    FILE *fp = fopen("/proc/net/unix", "r");
+    if (!fp) {
+        perror("Failed to open /proc/net/unix");
+        xfree(path);
+        xfree(abs_path);
+        return -1;
+    }
+
+    // Skip the first line (headers)
+    fgets(line, sizeof(line), fp);
+
+    while (fgets(line, sizeof(line), fp)) {
+        if (sscanf(line, "%*s %*s %*s %*s %*s %*s %s %s", inode, path) != 2) {
+            continue;
+        }
+
+        if (strcmp(abs_path, path) == 0) {
+            ino = atoi(inode);
+            break;
+        }
+    }
+
+    fclose(fp);
+    xfree(path);
+    xfree(abs_path);
+    return ino;
+}
+
+static pid_t find_pid_by_inode(ino_t target_inode)
+{
+    DIR *dir;
+    struct dirent *entry;
+    char *path = (char *)xmalloc(MAX_PATH_LEN);
+    char *fd_target = (char *)xmalloc(MAX_PATH_LEN * 2);
+    pid_t pid = -1;
+
+    if (!path || !fd_target) {
+        xfree(path);
+        xfree(fd_target);
+        return -1;
+    }
+
+    dir = opendir("/proc");
+    if (dir == NULL) {
+        perror("Failed to opendir /proc");
+        xfree(path);
+        xfree(fd_target);
+        return -1;
+    }
+
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_name[0] == '.')
+            continue;
+
+        snprintf(path, MAX_PATH_LEN, "/proc/%s/fd", entry->d_name);
+
+        DIR *fd_dir = opendir(path);
+        if (!fd_dir)
+            continue;
+
+        char pid_dname[MAX_PATH_LEN] = {0};
+        snprintf(pid_dname, sizeof(pid_dname), "%s", entry->d_name);
+
+        while ((entry = readdir(fd_dir)) != NULL) {
+            if (entry->d_name[0] == '.')
+                continue;
+
+            snprintf(fd_target, MAX_PATH_LEN * 2, "/proc/%s/fd/%s", pid_dname, entry->d_name);
+
+            char target[MAX_PATH_LEN];
+            ssize_t len = readlink(fd_target, target, MAX_PATH_LEN - 1);
+            if (len == -1) {
+                continue;
+            }
+            target[len] = '\0';
+
+            if (strncmp(target, "socket:[", 8) == 0) {
+                ino_t inode = atoi(&target[8]);
+
+                if (inode == target_inode) {
+                    pid = atoi(pid_dname);
+                    break;
+                }
+            }
+        }
+        closedir(fd_dir);
+        if (pid != -1)
+            break;
+    }
+
+    closedir(dir);
+    xfree(path);
+    xfree(fd_target);
+    return pid;
+}
+
+pid_t qmp_get_pid(char *sock_path)
+{
+    ino_t inode = get_inode_from_socket(sock_path);
+    if (inode <= 0) {
+        return -1;
+    }
+
+    return find_pid_by_inode(inode);
+}
 
 static int qmp_read(int fd, void *buf, size_t *len)
 {

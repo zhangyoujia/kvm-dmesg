@@ -27,6 +27,7 @@ typedef enum {
 
 typedef struct {
     guest_access_t ty;
+    pid_t pid;
     int (*get_registers)(uint64_t*, uint64_t*, uint64_t*);
     int (*readmem)(uint64_t, void*, size_t);
 } guest_client_t;
@@ -41,6 +42,7 @@ int qmp_client_init(char *sock_path);
 int qmp_client_uninit();
 int qmp_get_registers(uint64_t *idtr, uint64_t *cr3, uint64_t *cr4);
 int qmp_readmem(uint64_t addr, void *buffer, size_t size);
+pid_t qmp_get_pid(char *sock_path);
 
 int libvirt_client_init(char *guest_name);
 int libvirt_client_uninit();

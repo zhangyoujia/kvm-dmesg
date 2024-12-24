@@ -56,6 +56,7 @@ int guest_client_new(char *ac, guest_access_t ty)
                 return -1;
             c->get_registers = qmp_get_registers;
             c->readmem = qmp_readmem;
+            c->pid = qmp_get_pid(ac);
             break;
     }
     guest_client = c;
