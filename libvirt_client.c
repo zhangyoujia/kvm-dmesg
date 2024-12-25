@@ -92,6 +92,28 @@ static int libvirt_dlsym()
     return 0;
 }
 
+pid_t libvirt_get_pid(char *guest_name)
+{
+    char pid_file[128];
+    FILE *file;
+    pid_t pid;
+
+    snprintf(pid_file, sizeof(pid_file), "/var/run/libvirt/qemu/%s.pid", guest_name);
+
+    file = fopen(pid_file, "r");
+    if (!file) {
+        return -1;
+    }
+
+    if (fscanf(file, "%d", &pid) != 1) {
+        fclose(file);
+        return -1;
+    }
+
+    fclose(file);
+    return pid;
+}
+
 int libvirt_client_init(char *guest_name)
 {
     if (libvirt_dlopen()) {

@@ -48,6 +48,7 @@ int libvirt_client_init(char *guest_name);
 int libvirt_client_uninit();
 int libvirt_get_registers(uint64_t *idtr, uint64_t *cr3, uint64_t *cr4);
 int libvirt_readmem(uint64_t addr, void *buffer, size_t size);
+pid_t libvirt_get_pid(char *guest_name);
 
 int file_client_init(char *sock_path);
 int file_client_uninit();

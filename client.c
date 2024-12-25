@@ -44,6 +44,7 @@ int guest_client_new(char *ac, guest_access_t ty)
                 return -1;
             c->get_registers = libvirt_get_registers;
             c->readmem = libvirt_readmem;
+            c->pid = libvirt_get_pid(ac);
             break;
         case GUEST_MEMORY:
             if (file_client_init(ac))
