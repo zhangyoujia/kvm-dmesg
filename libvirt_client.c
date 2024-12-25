@@ -31,6 +31,7 @@
 #include "xutil.h"
 #include "defs.h"
 #include "log.h"
+#include "parse_hmp.h"
 #include "client.h"
 
 typedef enum {
@@ -277,6 +278,23 @@ int libvirt_readmem(uint64_t addr, void *buffer, size_t size)
             return -1;
         }
     }
+
+    return 0;
+}
+
+int libvirt_gpa2hva(uint64_t gpa, uint64_t *hva)
+{
+    char *hmp_response;
+    virDomainQemuMonitorCommandFlags flag = VIR_DOMAIN_QEMU_MONITOR_COMMAND_HMP;
+    char hmp_command[64] = {0};
+
+    snprintf(hmp_command, sizeof(hmp_command), "gpa2hva 0x%lx", gpa);
+    if (virDomainQemuMonitorCommand(domain, hmp_command, &hmp_response, flag) < 0) {
+        pr_err("Failed to send QMP command: %s", hmp_command);
+        return -1;
+    }
+    hmp_gpa2hva(hmp_response, hva);
+    xfree(hmp_response);
 
     return 0;
 }

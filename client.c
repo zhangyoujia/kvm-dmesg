@@ -45,6 +45,7 @@ int guest_client_new(char *ac, guest_access_t ty)
             c->get_registers = libvirt_get_registers;
             c->readmem = libvirt_readmem;
             c->pid = libvirt_get_pid(ac);
+            libvirt_gpa2hva(0, &c->hva_base);
             break;
         case GUEST_MEMORY:
             if (file_client_init(ac))
@@ -58,6 +59,7 @@ int guest_client_new(char *ac, guest_access_t ty)
             c->get_registers = qmp_get_registers;
             c->readmem = qmp_readmem;
             c->pid = qmp_get_pid(ac);
+            qmp_gpa2hva(0, &c->hva_base);
             break;
     }
     guest_client = c;

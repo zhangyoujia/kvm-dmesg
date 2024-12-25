@@ -16,6 +16,7 @@ sources = [
   'symbols.c',
   'printk.c',
   'xutil.c',
+  'parse_hmp.c',
   'client.c',
   'libvirt_client.c',
   'qmp_client.c',

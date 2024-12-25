@@ -30,6 +30,7 @@
 
 #include "xutil.h"
 #include "log.h"
+#include "parse_hmp.h"
 
 static int qmp_fd;
 
@@ -41,6 +42,7 @@ static int qmp_fd;
 
 #define QMP_COMMAND_INFO_REGS   "{\"execute\": \"human-monitor-command\", \"arguments\": {\"command-line\": \"info registers\"}}"
 #define QMP_COMMAND_XP          "{\"execute\": \"human-monitor-command\", \"arguments\": {\"command-line\": \"xp /%" PRIu64 "xb 0x%zx\"}}"
+#define QMP_COMMAND_GPA2HVA     "{\"execute\": \"human-monitor-command\", \"arguments\": {\"command-line\": \"gpa2hva 0x%lx\"}}"
 
 static char* get_absolute_path(const char *file_path)
 {
@@ -492,4 +494,35 @@ int qmp_readmem(uint64_t addr, void *buffer, size_t size)
     }
 
     return 0;
+}
+
+int qmp_gpa2hva(uint64_t gpa, uint64_t *hva)
+{
+    size_t nread, nwrite, cmd_len;
+    char *buf;
+    char cmd[256] = {0};
+
+    snprintf(cmd, sizeof(cmd), QMP_COMMAND_GPA2HVA, gpa);
+
+    cmd_len= strlen(cmd);
+
+    nwrite = xwrite(qmp_fd, cmd, cmd_len);
+    if (nwrite != cmd_len) {
+        return -1;
+    }
+
+    buf= xmalloc(256);
+
+    if (qmp_read(qmp_fd, buf, &nread) == -1 || nread <= 0) {
+        pr_err("Failed to get read");
+        goto err_exit;
+    }
+    hmp_gpa2hva(buf, hva);
+
+    xfree(buf);
+    return 0;
+
+err_exit:
+    xfree(buf);
+    return -1;
 }
