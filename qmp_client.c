@@ -83,7 +83,9 @@ static ino_t get_inode_from_socket(const char *socket_path)
     }
 
     // Skip the first line (headers)
-    fgets(line, sizeof(line), fp);
+    if (!fgets(line, sizeof(line), fp) ) {
+        goto err_exit;
+    }
 
     while (fgets(line, sizeof(line), fp)) {
         if (sscanf(line, "%*s %*s %*s %*s %*s %*s %s %s", inode, path) != 2) {
@@ -96,6 +98,7 @@ static ino_t get_inode_from_socket(const char *socket_path)
         }
     }
 
+err_exit:
     fclose(fp);
     xfree(path);
     xfree(abs_path);
