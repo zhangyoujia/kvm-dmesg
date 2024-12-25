@@ -38,7 +38,6 @@ int mem_init(pid_t pid, uint64_t hva_base)
     snprintf(mem_path, sizeof(mem_path), "/proc/%d/mem", pid);
     fd = open(mem_path, O_RDONLY);
     if (fd == -1) {
-        pr_err("Failed to open /proc/%d/mem", pid);
         return -1;
     }
 
