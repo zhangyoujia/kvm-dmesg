@@ -1,5 +1,6 @@
 #include "defs.h"
 #include "xutil.h"
+#include "mem.h"
 #include "client.h"
 
 guest_client_t *guest_client = NULL;
@@ -42,10 +43,13 @@ int guest_client_new(char *ac, guest_access_t ty)
         case GUEST_NAME:
             if (libvirt_client_init(ac))
                 return -1;
-            c->get_registers = libvirt_get_registers;
-            c->readmem = libvirt_readmem;
             c->pid = libvirt_get_pid(ac);
             libvirt_gpa2hva(0, &c->hva_base);
+            mem_init(c->pid, c->hva_base);
+
+            c->get_registers = libvirt_get_registers;
+            /* c->readmem = libvirt_readmem; */
+            c->readmem = mem_read;
             break;
         case GUEST_MEMORY:
             if (file_client_init(ac))
@@ -56,10 +60,13 @@ int guest_client_new(char *ac, guest_access_t ty)
         case QMP_SOCKET:
             if (qmp_client_init(ac))
                 return -1;
-            c->get_registers = qmp_get_registers;
-            c->readmem = qmp_readmem;
             c->pid = qmp_get_pid(ac);
             qmp_gpa2hva(0, &c->hva_base);
+            mem_init(c->pid, c->hva_base);
+
+            c->get_registers = qmp_get_registers;
+            /* c->readmem = qmp_readmem; */
+            c->readmem = mem_read;
             break;
     }
     guest_client = c;
@@ -75,12 +82,14 @@ int guest_client_release()
     switch(c->ty) {
         case GUEST_NAME:
             libvirt_client_uninit();
+            mem_uninit();
             break;
         case GUEST_MEMORY:
             file_client_uninit();
             break;
         case QMP_SOCKET:
             qmp_client_uninit();
+            mem_uninit();
             break;
     }
     xfree(c);

@@ -16,6 +16,7 @@ SRC = main.c \
 	  symbols.c \
 	  printk.c \
 	  xutil.c \
+	  mem.c \
 	  parse_hmp.c \
 	  client.c \
 	  libvirt_client.c \
