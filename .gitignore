@@ -1,6 +1,13 @@
 kvm-dmesg
+compile_commands.json
 *.o
+.*.o.cmd
 tags
+GPATH
+GRTAGS
+GTAGS
 build
+.cache
+.vim-bookmarks
 tests/kvm-dmesg-ci
 scripts/*.tar.gz
